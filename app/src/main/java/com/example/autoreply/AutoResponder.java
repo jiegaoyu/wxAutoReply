@@ -1,24 +1,20 @@
 package com.example.autoreply;
 
+import android.os.Handler;
+import android.os.Looper;
 import android.text.TextUtils;
-
-import de.robv.android.xposed.XposedBridge;
 
 import java.util.concurrent.ConcurrentHashMap;
 
+import de.robv.android.xposed.XposedBridge;
+import de.robv.android.xposed.XposedHelpers;
+
 public class AutoResponder {
 
-    // 3 秒内同一条自动回复去重
     private static final ConcurrentHashMap<String, Long> LAST_SENT = new ConcurrentHashMap<>();
-    private static final long DEDUP_WINDOW_MS = 3000L;
+    private static final long DEDUP_WINDOW_MS = 3000; // 3s
+    private static final Handler MAIN = new Handler(Looper.getMainLooper());
 
-    // 发送中的重入保护：某些机型/Hook路径可能同步回调，避免递归触发
-    private static final ThreadLocal<Boolean> SENDING = new ThreadLocal<>();
-    private static boolean isSending() {
-        return Boolean.TRUE.equals(SENDING.get());
-    }
-
-    /** 对外统一入口（异步） */
     public static void replyAsync(final String talker, final String text) {
         if (TextUtils.isEmpty(talker) || TextUtils.isEmpty(text)) {
             XposedBridge.log(MainHook.TAG + " [reply] skip empty talker/text");
@@ -33,62 +29,67 @@ public class AutoResponder {
         }
         LAST_SENT.put(key, now);
 
-        new Thread(() -> reply(talker, text), "wxauto-reply").start();
+        new Thread(() -> doReplyOnMain(talker, text)).start();
     }
 
-    /** 核心发送：模板克隆 + Hb(拿seq) + 轻延迟 + Ic + 踢队列(Rc/U9)，全部在主线程执行关键步骤 */
-    private static void reply(String talker, String text) {
-        if (isSending()) {
-            XposedBridge.log(MainHook.TAG + " [reentry] already sending, skip");
-            return;
-        }
-        SENDING.set(true);
+    /** 把 Hb / Ic 顺序放到主线程执行，并在 Ic 后 poke 主线程调度 */
+    private static void doReplyOnMain(final String talker, final String text) {
         try {
-            // 1) 模板克隆（后台线程做即可）
-            Object g8 = WechatG8Prototype.cloneAndPatch(talker, text);
-            if (g8 == null) {
+            // 1) 克隆模板并打补丁
+            final Object[] holder = new Object[1];
+            boolean okProto = MainHook.runOnMainSync(() -> holder[0] = WechatG8Prototype.cloneAndPatch(talker, text));
+            if (!okProto || holder[0] == null) {
                 XposedBridge.log(MainHook.TAG + " [send:A] no template g8; skip");
                 return;
             }
+            final Object g8 = holder[0];
 
-            // 2) Hb 放主线程执行，拿到 seq
+            // 2) Hb 拿 seq
             final long[] seqBox = new long[1];
-            boolean okMain1 = MainHook.runOnMainSync(() -> {
-                seqBox[0] = WechatKernelSender.callHbAndGetSeq(MainHook.sKernelMsgSender, g8, true, true);
-            });
-            long seq = seqBox[0];
-            XposedBridge.log(MainHook.TAG + " [send:A] Hb(g8,true,true) -> " + seq + " (onMain=" + okMain1 + ")");
-            if (seq <= 0) {
-                XposedBridge.log(MainHook.TAG + " [reply] ok=false path=A/Hb (ret<=0)");
-                return;
-            }
+            boolean okHb = MainHook.runOnMainSync(() ->
+                    seqBox[0] = WechatKernelSender.callHbAndGetSeq(MainHook.sKernelMsgSender, g8, true, true)
+            );
+            long seq = okHb ? seqBox[0] : -1;
+            XposedBridge.log(MainHook.TAG + " [send:A] Hb ret=" + seq);
+            if (seq <= 0) return;
 
-            // 3) 轻微延迟，避免与模板时间戳完全重合
-            try { Thread.sleep(150 + (long)(Math.random() * 150)); } catch (Throwable ignored) {}
-
-            // 4) Ic 同样主线程执行
-            final int[] icBox = new int[1];
-            boolean okMain2 = MainHook.runOnMainSync(() -> {
-                icBox[0] = WechatKernelSender.callIc(MainHook.sKernelMsgSender, seq, g8, true);
-            });
-            int icRet = icBox[0];
-            XposedBridge.log(MainHook.TAG + " [send:A] Ic(seq,g8,true) -> " + icRet + " (onMain=" + okMain2 + ")");
-
-            // 5) 踢队列：优先 Rc(g8)/或 U9(g8) 二选一
-            MainHook.runOnMainSync(() -> {
+            // 3) 主线程小延迟后 Ic（模拟切前台调度tick）
+            MAIN.postDelayed(() -> {
                 try {
-                    int kick = WechatKernelSender.tryU9OrRcOnce(MainHook.sKernelMsgSender, g8);
-                    XposedBridge.log(MainHook.TAG + " [send:A] kick queue via U9/Rc -> " + kick);
+                    int ic = WechatKernelSender.callIc(MainHook.sKernelMsgSender, seq, g8, true);
+                    XposedBridge.log(MainHook.TAG + " [send:A] Ic ret=" + ic);
+                    if (ic <= 0) {
+                        int alt = WechatKernelSender.tryU9OrRcOnce(MainHook.sKernelMsgSender, g8);
+                        XposedBridge.log(MainHook.TAG + " [send:A] Ic<=0 fallback ret=" + alt);
+                    }
+                    pokeMain();
+                    XposedBridge.log(MainHook.TAG + " [reply] -> " + talker + " ok=true path=A/Hb+Ic");
                 } catch (Throwable t) {
-                    XposedBridge.log(MainHook.TAG + " [send:A] kick err " + t);
+                    XposedBridge.log(MainHook.TAG + " [reply] Ic error: " + t);
                 }
-            });
-
-            XposedBridge.log(MainHook.TAG + " [reply] -> " + talker + " ok=true path=A/Hb+Ic(+kick)");
+            }, 160);
         } catch (Throwable t) {
             XposedBridge.log(MainHook.TAG + " [reply] exception: " + t);
-        } finally {
-            SENDING.remove();
+        }
+    }
+
+    /** 尝试唤醒/刷新发送管线，等价于切回前台时的那个“心跳” */
+    private static void pokeMain() {
+        try {
+            final Object sender = MainHook.sKernelMsgSender;
+            if (sender != null) {
+                String[] ms = new String[]{"notifyDataSetChanged", "doNotify", "flush", "G0", "p0"};
+                for (String m : ms) {
+                    try {
+                        XposedHelpers.callMethod(sender, m);
+                        XposedBridge.log(MainHook.TAG + " [poke] sender." + m + "()");
+                        return;
+                    } catch (Throwable ignored) {}
+                }
+            }
+            MAIN.post(() -> {});
+        } catch (Throwable t) {
+            XposedBridge.log(MainHook.TAG + " [poke] error: " + t);
         }
     }
 }
