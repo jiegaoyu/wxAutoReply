@@ -48,12 +48,12 @@ public class AutoResponder {
             
             XposedBridge.log(MainHook.TAG + " [send:A] no template g8; skip send"); return; }
             
-            WechatG8Prototype.dumpForDebug(g8);
+            //WechatG8Prototype.dumpForDebug(g8);
 
             // 2) 先 Hb 拿序号（必须主线程）
             final long[] seqBox = { -1 };
             MainHook.runOnMainSync(() -> {
-            WechatG8Prototype.dumpForDebug(g8);
+            //WechatG8Prototype.dumpForDebug(g8);
                 long seq = WechatKernelSender.callHbAndGetSeq(sender, g8, true, true);
                 seqBox[0] = seq;
             });
