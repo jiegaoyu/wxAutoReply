@@ -1,70 +1,84 @@
 package com.example.autoreply;
 
-import android.app.Application;
-import android.content.Context;
+import android.util.Log;
 
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
-import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
-public final class MainHook implements IXposedHookLoadPackage {
+public class MainHook implements IXposedHookLoadPackage {
 
-    public static final String TAG = "[WxAutoReply]";
-    private static final String PKG = "com.tencent.mm";
+    // ==== 日志 TAG（成员变量，而非方法） ====
+    public static final String TAG = "WxAutoReply";
 
-    // 进程级一次性开关
-    private static final AtomicBoolean sDidInit = new AtomicBoolean(false);
+    // ==== 可被其他类使用的共享状态 ====
+    // 学到的“发消息核心”实例 com.tencent.mm.storage.i8
+    public static volatile Object sKernelMsgSender = null;
+    // 学到的消息实体类 com.tencent.mm.storage.g8
+    public static volatile Class<?> sKernelMsgEntityCls = null;
+
+    // talker -> talkerId 学习映射
+    private static final Map<String, Integer> sTalkerIdMap = new ConcurrentHashMap<>();
+
+    // ==== 日志工具 ====
+    public static void log(String msg) {
+        Log.i(TAG, msg);
+        XposedBridge.log("[" + TAG + "] " + msg);
+    }
+
+    public static void w(String msg) {
+        Log.w(TAG, msg);
+        XposedBridge.log("[" + TAG + "] " + msg);
+    }
+
+    public static void e(String msg, Throwable t) {
+        Log.e(TAG, msg, t);
+        XposedBridge.log("[" + TAG + "] " + msg + " : " + Log.getStackTraceString(t));
+    }
+
+    // ==== 供 tracer/其他类设置学习到的对象 ====
+    public static void setSender(Object sender) {
+        sKernelMsgSender = sender;
+        if (sender != null) {
+            log("[learn] sender instance learned: " + sender.getClass().getName());
+        }
+    }
+
+    public static void setG8Class(Class<?> g8) {
+        sKernelMsgEntityCls = g8;
+        if (g8 != null) {
+            log("[learn] g8 class: " + g8.getName());
+        }
+    }
+
+    public static void putTalkerId(String talker, int id) {
+        if (talker == null) return;
+        sTalkerIdMap.put(talker, id);
+        log("[learn] talkerId learned: " + talker + " -> " + id);
+    }
+
+    public static Integer getTalkerId(String talker) {
+        if (talker == null) return null;
+        return sTalkerIdMap.get(talker);
+    }
 
     @Override
-    public void handleLoadPackage(final XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
-        if (!PKG.equals(lpparam.packageName)) return;
-
-        XposedBridge.log(TAG + " init in process: " + lpparam.processName);
-        if (!PKG.equals(lpparam.processName)) {
-            XposedBridge.log(TAG + " skip (non-main process): " + lpparam.processName);
-            return;
-        }
-
-        XposedBridge.hookAllMethods(Application.class, "attach", new XC_MethodHook() {
-            @Override protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                if (!sDidInit.compareAndSet(false, true)) return;
-
-                Context ctx = (Context) param.args[0];
-                ClassLoader cl = ctx.getClassLoader();
-
-                XposedBridge.log(TAG + " Application.attach hit: app=" + param.thisObject
-                        + " ctx=" + ctx + " pid=" + android.os.Process.myPid()
-                        + " th=" + Thread.currentThread().getName());
-
-                try {
-                    WechatMsgDbHook.install(ctx, cl);
-                    XposedBridge.log(TAG + " WechatMsgDbHook installed.");
-                } catch (Throwable t) {
-                    XposedBridge.log(TAG + " WechatMsgDbHook install fail: " + t);
-                }
-
-                try {
-                    SenderLearningHook.install(cl);
-                    XposedBridge.log(TAG + " SenderLearningHook installed.");
-                } catch (Throwable t) {
-                    XposedBridge.log(TAG + " SenderLearningHook install fail: " + t);
-                }
-
-                if (SenderLearningHook.sSenderInstance != null && SenderLearningHook.sG8Class != null) {
-                    try {
-                        WechatKernelTracer.install(cl);
-                        XposedBridge.log(TAG + " WechatKernelTracer installed.");
-                    } catch (Throwable t) {
-                        XposedBridge.log(TAG + " WechatKernelTracer install fail: " + t);
-                    }
-                }
-
-                XposedBridge.log(TAG + " init done on MAIN process: " + lpparam.processName);
+    public void handleLoadPackage(final XC_LoadPackage.LoadPackageParam lpparam) {
+        try {
+            if (!"com.tencent.mm".equals(lpparam.packageName)) {
+                return;
             }
-        });
+            log("init in process: " + lpparam.packageName);
+
+            // 安装内核跟踪器（负责学到 i8/g8，并打印 Hb/Ic/tb）
+            WechatKernelTracer.install(lpparam.classLoader);
+
+            log("init done on MAIN process: " + lpparam.packageName);
+        } catch (Throwable t) {
+            e("init failed", t);
+        }
     }
 }
-

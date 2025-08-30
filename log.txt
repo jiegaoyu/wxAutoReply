@@ -1,0 +1,146 @@
+1 02:09:31.245 I/WxAutoReply(12150): [proto] template saved: com.tencent.mm.storage.g8@7d7be2f
+08-31 02:09:31.245 I/LSPosed-Bridge(12150): [WxAutoReply] [proto] template saved: com.tencent.mm.storage.g8@7d7be2f
+08-31 02:09:31.246 I/WxAutoReply(12150): [Hb.before] talker=wxid_jik8ngc61r2222 from=null to=null talkerId=0 content=11 isSend=1 status=1 type=1 ct=1756577371822 msgId=0 svrId=0 seq=0
+08-31 02:09:31.246 I/LSPosed-Bridge(12150): [WxAutoReply] [Hb.before] talker=wxid_jik8ngc61r2222 from=null to=null talkerId=0 content=11 isSend=1 status=1 type=1 ct=1756577371822 msgId=0 svrId=0 seq=0
+08-31 02:09:31.271 I/WxAutoReply(12150): [proto] template saved: com.tencent.mm.storage.g8@7d7be2f
+08-31 02:09:31.271 I/LSPosed-Bridge(12150): [WxAutoReply] [proto] template saved: com.tencent.mm.storage.g8@7d7be2f
+08-31 02:09:31.271 I/WxAutoReply(12150): [learn] talkerId learned: wxid_jik8ngc61r2222 -> 47
+08-31 02:09:31.271 I/LSPosed-Bridge(12150): [WxAutoReply] [learn] talkerId learned: wxid_jik8ngc61r2222 -> 47
+08-31 02:09:31.272 I/WxAutoReply(12150): [Hb.after] talker=wxid_jik8ngc61r2222 from=null to=null talkerId=47 content=11 isSend=1 status=1 type=1 ct=1756577371822 msgId=1514 svrId=0 seq=0 ret=1514
+08-31 02:09:31.272 I/LSPosed-Bridge(12150): [WxAutoReply] [Hb.after] talker=wxid_jik8ngc61r2222 from=null to=null talkerId=47 content=11 isSend=1 status=1 type=1 ct=1756577371822 msgId=1514 svrId=0 seq=0 ret=1514
+08-31 02:09:31.483 I/WxAutoReply(12150): [trace] BEFORE Ic args=[1514, g8, true]
+08-31 02:09:31.483 I/LSPosed-Bridge(12150): [WxAutoReply] [trace] BEFORE Ic args=[1514, g8, true]
+08-31 02:09:31.493 I/WxAutoReply(12150): [trace] AFTER  Ic ret=1
+08-31 02:09:31.493 I/LSPosed-Bridge(12150): [WxAutoReply] [trace] AFTER  Ic ret=1
+08-31 02:09:33.505 I/WxAutoReply(12976): init in process: com.tencent.mm
+08-31 02:09:33.505 I/LSPosed-Bridge(12976): [WxAutoReply] init in process: com.tencent.mm
+08-31 02:09:33.506 I/WxAutoReply(12976): [learn] g8 class: com.tencent.mm.storage.g8
+08-31 02:09:33.506 I/LSPosed-Bridge(12976): [WxAutoReply] [learn] g8 class: com.tencent.mm.storage.g8
+08-31 02:09:33.510 I/WxAutoReply(12976): WechatKernelTracer installed.
+08-31 02:09:33.510 I/LSPosed-Bridge(12976): [WxAutoReply] WechatKernelTracer installed.
+08-31 02:09:33.510 I/WxAutoReply(12976): init done on MAIN process: com.tencent.mm
+08-31 02:09:33.510 I/LSPosed-Bridge(12976): [WxAutoReply] init done on MAIN process: com.tencent.mm
+08-31 02:09:38.795 I/WxAutoReply(12150): [proto] template saved: com.tencent.mm.storage.g8@dc713a3
+08-31 02:09:38.795 I/LSPosed-Bridge(12150): [WxAutoReply] [proto] template saved: com.tencent.mm.storage.g8@dc713a3
+08-31 02:09:38.797 I/WxAutoReply(12150): [tb.before] in=talker=wxid_jik8ngc61r2222 from=null to=null talkerId=0 content=22 isSend=0 status=3 type=1 ct=1756577378000 msgId=0 svrId=5646672284545494452 seq=547 args=[g8]
+08-31 02:09:38.797 I/LSPosed-Bridge(12150): [WxAutoReply] [tb.before] in=talker=wxid_jik8ngc61r2222 from=null to=null talkerId=0 content=22 isSend=0 status=3 type=1 ct=1756577378000 msgId=0 svrId=5646672284545494452 seq=547 args=[g8]
+08-31 02:09:38.797 I/WxAutoReply(12150): [proto] template saved: com.tencent.mm.storage.g8@dc713a3
+08-31 02:09:38.797 I/LSPosed-Bridge(12150): [WxAutoReply] [proto] template saved: com.tencent.mm.storage.g8@dc713a3
+08-31 02:09:38.798 I/WxAutoReply(12150): [Hb.before] talker=wxid_jik8ngc61r2222 from=null to=null talkerId=0 content=22 isSend=0 status=3 type=1 ct=1756577378000 msgId=0 svrId=5646672284545494452 seq=547
+08-31 02:09:38.798 I/LSPosed-Bridge(12150): [WxAutoReply] [Hb.before] talker=wxid_jik8ngc61r2222 from=null to=null talkerId=0 content=22 isSend=0 status=3 type=1 ct=1756577378000 msgId=0 svrId=5646672284545494452 seq=547
+08-31 02:09:38.802 I/WxAutoReply(12150): [proto] template saved: com.tencent.mm.storage.g8@dc713a3
+08-31 02:09:38.802 I/LSPosed-Bridge(12150): [WxAutoReply] [proto] template saved: com.tencent.mm.storage.g8@dc713a3
+08-31 02:09:38.802 I/WxAutoReply(12150): [learn] talkerId learned: wxid_jik8ngc61r2222 -> 47
+08-31 02:09:38.802 I/LSPosed-Bridge(12150): [WxAutoReply] [learn] talkerId learned: wxid_jik8ngc61r2222 -> 47
+08-31 02:09:38.803 I/WxAutoReply(12150): [Hb.after] talker=wxid_jik8ngc61r2222 from=null to=null talkerId=47 content=22 isSend=0 status=3 type=1 ct=1756577378000 msgId=1515 svrId=5646672284545494452 seq=547 ret=1515
+08-31 02:09:38.803 I/LSPosed-Bridge(12150): [WxAutoReply] [Hb.after] talker=wxid_jik8ngc61r2222 from=null to=null talkerId=47 content=22 isSend=0 status=3 type=1 ct=1756577378000 msgId=1515 svrId=5646672284545494452 seq=547 ret=1515
+08-31 02:09:38.805 I/WxAutoReply(12150): [tb.after] in=talker=wxid_jik8ngc61r2222 from=null to=null talkerId=47 content=22 isSend=0 status=3 type=1 ct=1756577378000 msgId=1515 svrId=5646672284545494452 seq=547 ret=1515
+08-31 02:09:38.805 I/LSPosed-Bridge(12150): [WxAutoReply] [tb.after] in=talker=wxid_jik8ngc61r2222 from=null to=null talkerId=47 content=22 isSend=0 status=3 type=1 ct=1756577378000 msgId=1515 svrId=5646672284545494452 seq=547 ret=1515
+08-31 02:09:38.806 I/WxAutoReply(12150): [reply][verify] talker=wxid_jik8ngc61r2222 content=自动回复: 已收到「22」
+08-31 02:09:38.806 I/LSPosed-Bridge(12150): [WxAutoReply] [reply][verify] talker=wxid_jik8ngc61r2222 content=自动回复: 已收到「22」
+08-31 02:09:38.806 I/WxAutoReply(12150): [reply] calling AutoResponder.send() …
+08-31 02:09:38.806 I/LSPosed-Bridge(12150): [WxAutoReply] [reply] calling AutoResponder.send() …
+08-31 02:09:38.807 I/WxAutoReply(12150): [reply] enter AutoResponder.send talker=wxid_jik8ngc61r2222 reply=自动回复: 已收到「22」
+08-31 02:09:38.807 I/LSPosed-Bridge(12150): [WxAutoReply] [reply] enter AutoResponder.send talker=wxid_jik8ngc61r2222 reply=自动回复: 已收到「22」
+08-31 02:09:38.807 I/WxAutoReply(12150): [reply] state sender=com.tencent.mm.storage.i8@8d136a0 g8Cls=class com.tencent.mm.storage.g8
+08-31 02:09:38.807 I/LSPosed-Bridge(12150): [WxAutoReply] [reply] state sender=com.tencent.mm.storage.i8@8d136a0 g8Cls=class com.tencent.mm.storage.g8
+08-31 02:09:38.807 I/WxAutoReply(12150): [reply] about to buildOutgoing …
+08-31 02:09:38.807 I/LSPosed-Bridge(12150): [WxAutoReply] [reply] about to buildOutgoing …
+08-31 02:09:38.807 I/WxAutoReply(12150): [proto] buildOutgoing by shallowClone
+08-31 02:09:38.807 I/LSPosed-Bridge(12150): [WxAutoReply] [proto] buildOutgoing by shallowClone
+08-31 02:09:38.811 I/WxAutoReply(12150): [proto] buildOutgoing ok: talker=wxid_jik8ngc61r2222 content=自动回复: 已收到「22」
+08-31 02:09:38.811 I/LSPosed-Bridge(12150): [WxAutoReply] [proto] buildOutgoing ok: talker=wxid_jik8ngc61r2222 content=自动回复: 已收到「22」
+08-31 02:09:38.811 I/WxAutoReply(12150): [reply] buildOutgoing returned: com.tencent.mm.storage.g8@dc713a3
+08-31 02:09:38.811 I/LSPosed-Bridge(12150): [WxAutoReply] [reply] buildOutgoing returned: com.tencent.mm.storage.g8@dc713a3
+08-31 02:09:38.811 I/WxAutoReply(12150): [reply] calling Hb …
+08-31 02:09:38.811 I/LSPosed-Bridge(12150): [WxAutoReply] [reply] calling Hb …
+08-31 02:09:38.812 I/WxAutoReply(12150): [proto] template saved: com.tencent.mm.storage.g8@dc713a3
+08-31 02:09:38.812 I/LSPosed-Bridge(12150): [WxAutoReply] [proto] template saved: com.tencent.mm.storage.g8@dc713a3
+08-31 02:09:38.812 I/WxAutoReply(12150): [learn] talkerId learned: wxid_jik8ngc61r2222 -> 47
+08-31 02:09:38.813 I/LSPosed-Bridge(12150): [WxAutoReply] [learn] talkerId learned: wxid_jik8ngc61r2222 -> 47
+08-31 02:09:38.814 I/WxAutoReply(12150): [Hb.before] talker=wxid_jik8ngc61r2222 from=null to=null talkerId=47 content=自动回复: 已收到「22」 isSend=1 status=1 type=1 ct=1756577378809 msgId=0 svrId=0 seq=0
+08-31 02:09:38.814 I/LSPosed-Bridge(12150): [WxAutoReply] [Hb.before] talker=wxid_jik8ngc61r2222 from=null to=null talkerId=47 content=自动回复: 已收到「22」 isSend=1 status=1 type=1 ct=1756577378809 msgId=0 svrId=0 seq=0
+08-31 02:09:38.819 I/WxAutoReply(12150): [proto] template saved: com.tencent.mm.storage.g8@dc713a3
+08-31 02:09:38.819 I/LSPosed-Bridge(12150): [WxAutoReply] [proto] template saved: com.tencent.mm.storage.g8@dc713a3
+08-31 02:09:38.819 I/WxAutoReply(12150): [learn] talkerId learned: wxid_jik8ngc61r2222 -> 47
+08-31 02:09:38.819 I/LSPosed-Bridge(12150): [WxAutoReply] [learn] talkerId learned: wxid_jik8ngc61r2222 -> 47
+08-31 02:09:38.820 I/WxAutoReply(12150): [Hb.after] talker=wxid_jik8ngc61r2222 from=null to=null talkerId=47 content=自动回复: 已收到「22」 isSend=1 status=1 type=1 ct=1756577378809 msgId=1516 svrId=0 seq=0 ret=1516
+08-31 02:09:38.820 I/LSPosed-Bridge(12150): [WxAutoReply] [Hb.after] talker=wxid_jik8ngc61r2222 from=null to=null talkerId=47 content=自动回复: 已收到「22」 isSend=1 status=1 type=1 ct=1756577378809 msgId=1516 svrId=0 seq=0 ret=1516
+08-31 02:09:38.820 I/WxAutoReply(12150): [reply] Hb returned raw=1516
+08-31 02:09:38.820 I/LSPosed-Bridge(12150): [WxAutoReply] [reply] Hb returned raw=1516
+08-31 02:09:38.820 I/WxAutoReply(12150): [reply] Hb rowId=1516
+08-31 02:09:38.820 I/LSPosed-Bridge(12150): [WxAutoReply] [reply] Hb rowId=1516
+08-31 02:09:38.820 I/WxAutoReply(12150): [reply] calling Ic with rowId=1516 …
+08-31 02:09:38.820 I/LSPosed-Bridge(12150): [WxAutoReply] [reply] calling Ic with rowId=1516 …
+08-31 02:09:38.821 I/WxAutoReply(12150): [trace] BEFORE Ic args=[1516, g8, true]
+08-31 02:09:38.821 I/LSPosed-Bridge(12150): [WxAutoReply] [trace] BEFORE Ic args=[1516, g8, true]
+08-31 02:09:38.823 I/WxAutoReply(12150): [trace] AFTER  Ic ret=1
+08-31 02:09:38.823 I/LSPosed-Bridge(12150): [WxAutoReply] [trace] AFTER  Ic ret=1
+08-31 02:09:38.823 I/WxAutoReply(12150): [reply] Ic ret=1
+08-31 02:09:38.823 I/LSPosed-Bridge(12150): [WxAutoReply] [reply] Ic ret=1
+08-31 02:09:38.824 E/WxAutoReply(12150): [reply][dispatch] Mb(g8) failed
+08-31 02:09:38.824 E/WxAutoReply(12150): OvgYkHlzUxO.n.uXfr.ADM.XposedHelpers$InvocationTargetError: java.lang.NullPointerException: Attempt to read from field 'java.lang.String v43.c0.d' on a null object reference in method 'long com.tencent.mm.storage.i8.Mb(com.tencent.mm.storage.g8)'
+08-31 02:09:38.824 E/WxAutoReply(12150): 	at OvgYkHlzUxO.n.uXfr.ADM.XposedHelpers.callMethod(SourceFile:2)
+08-31 02:09:38.824 E/WxAutoReply(12150): 	at com.example.autoreply.AutoResponder.send(AutoResponder.java:68)
+08-31 02:09:38.824 E/WxAutoReply(12150): 	at com.example.autoreply.WechatKernelTracer.tryTriggerAutoReply(WechatKernelTracer.java:134)
+08-31 02:09:38.824 E/WxAutoReply(12150): 	at com.example.autoreply.WechatKernelTracer.-$$Nest$smtryTriggerAutoReply(Unknown Source:0)
+08-31 02:09:38.824 E/WxAutoReply(12150): 	at com.example.autoreply.WechatKernelTracer$3.afterHookedMethod(WechatKernelTracer.java:87)
+08-31 02:09:38.824 E/WxAutoReply(12150): 	at OvgYkHlzUxO.n.uXfr.ADM.XposedBridge$LegacyApiSupport.handleAfter(Unknown Source:33)
+08-31 02:09:38.824 E/WxAutoReply(12150): 	at org.lsposed.lspd.impl.LSPosedBridge$NativeHooker.callback(Unknown Source:281)
+08-31 02:09:38.824 E/WxAutoReply(12150): 	at LSPHooker_.tb(Unknown Source:11)
+08-31 02:09:38.824 E/WxAutoReply(12150): 	at zs0.a9.x(Unknown Source:82)
+08-31 02:09:38.824 E/WxAutoReply(12150): 	at zs0.j.W4(Unknown Source:266)
+08-31 02:09:38.824 E/WxAutoReply(12150): 	at com.tencent.mm.plugin.messenger.foundation.u0.b(Unknown Source:641)
+08-31 02:09:38.824 E/WxAutoReply(12150): 	at com.tencent.mm.plugin.messenger.foundation.u0.c(Unknown Source:9)
+08-31 02:09:38.824 E/WxAutoReply(12150): 	at com.tencent.mm.plugin.messenger.foundation.u0.a(Unknown Source:549)
+08-31 02:09:38.824 E/WxAutoReply(12150): 	at com.tencent.mm.plugin.messenger.foundation.t1.a(Unknown Source:32)
+08-31 02:09:38.824 E/WxAutoReply(12150): 	at com.tencent.mm.plugin.zero.b1.d(Unknown Source:120)
+08-31 02:09:38.824 E/WxAutoReply(12150): 	at mu0.i2.run(Unknown Source:301)
+08-31 02:09:38.824 E/WxAutoReply(12150): 	at java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:524)
+08-31 02:09:38.824 E/WxAutoReply(12150): 	at java.util.concurrent.FutureTask.run(FutureTask.java:317)
+08-31 02:09:38.824 E/WxAutoReply(12150): 	at fc5.l.run(Unknown Source:242)
+08-31 02:09:38.824 E/WxAutoReply(12150): 	at gc5.v.run(Unknown Source:8)
+08-31 02:09:38.824 E/WxAutoReply(12150): 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1156)
+08-31 02:09:38.824 E/WxAutoReply(12150): 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:651)
+08-31 02:09:38.824 E/WxAutoReply(12150): 	at yb5.c.run(Unknown Source:2)
+08-31 02:09:38.824 E/WxAutoReply(12150): 	at java.lang.Thread.run(Thread.java:1119)
+08-31 02:09:38.824 E/WxAutoReply(12150): Caused by: java.lang.NullPointerException: Attempt to read from field 'java.lang.String v43.c0.d' on a null object reference in method 'long com.tencent.mm.storage.i8.Mb(com.tencent.mm.storage.g8)'
+08-31 02:09:38.824 E/WxAutoReply(12150): 	at com.tencent.mm.storage.i8.Mb(Unknown Source:84)
+08-31 02:09:38.824 E/WxAutoReply(12150): 	at java.lang.reflect.Method.invoke(Native Method)
+08-31 02:09:38.824 E/WxAutoReply(12150): 	at OvgYkHlzUxO.n.uXfr.ADM.XposedHelpers.callMethod(SourceFile:1)
+08-31 02:09:38.824 E/WxAutoReply(12150): 	... 23 more
+08-31 02:09:38.824 I/LSPosed-Bridge(12150): [WxAutoReply] [reply][dispatch] Mb(g8) failed : OvgYkHlzUxO.n.uXfr.ADM.XposedHelpers$InvocationTargetError: java.lang.NullPointerException: Attempt to read from field 'java.lang.String v43.c0.d' on a null object reference in method 'long com.tencent.mm.storage.i8.Mb(com.tencent.mm.storage.g8)'
+08-31 02:09:38.824 I/WxAutoReply(12150): [reply][dispatch] U9(g8) ret=1517
+08-31 02:09:38.825 I/LSPosed-Bridge(12150): [WxAutoReply] [reply][dispatch] U9(g8) ret=1517
+08-31 02:09:38.825 I/WxAutoReply(12150): [reply][dispatch] update bestRowId: 1516 -> 1517 (from U9)
+08-31 02:09:38.825 I/LSPosed-Bridge(12150): [WxAutoReply] [reply][dispatch] update bestRowId: 1516 -> 1517 (from U9)
+08-31 02:09:38.825 I/WxAutoReply(12150): [reply] re-Ic with rowId=1517 …
+08-31 02:09:38.825 I/LSPosed-Bridge(12150): [WxAutoReply] [reply] re-Ic with rowId=1517 …
+08-31 02:09:38.825 I/WxAutoReply(12150): [trace] BEFORE Ic args=[1517, g8, true]
+08-31 02:09:38.825 I/LSPosed-Bridge(12150): [WxAutoReply] [trace] BEFORE Ic args=[1517, g8, true]
+08-31 02:09:38.825 I/WxAutoReply(12150): [trace] AFTER  Ic ret=0
+08-31 02:09:38.825 I/LSPosed-Bridge(12150): [WxAutoReply] [trace] AFTER  Ic ret=0
+08-31 02:09:38.825 I/WxAutoReply(12150): [reply] re-Ic ret=0
+08-31 02:09:38.826 I/LSPosed-Bridge(12150): [WxAutoReply] [reply] re-Ic ret=0
+08-31 02:09:38.826 I/WxAutoReply(12150): [trace] BEFORE Ic args=[1517, g8, true]
+08-31 02:09:38.826 I/LSPosed-Bridge(12150): [WxAutoReply] [trace] BEFORE Ic args=[1517, g8, true]
+08-31 02:09:38.826 I/WxAutoReply(12150): [trace] AFTER  Ic ret=0
+08-31 02:09:38.826 I/LSPosed-Bridge(12150): [WxAutoReply] [trace] AFTER  Ic ret=0
+08-31 02:09:38.827 I/WxAutoReply(12150): [reply][dispatch] Ec(rowId=1517,g8) ret=0
+08-31 02:09:38.827 I/LSPosed-Bridge(12150): [WxAutoReply] [reply][dispatch] Ec(rowId=1517,g8) ret=0
+08-31 02:09:38.829 I/WxAutoReply(12150): [reply][dispatch] Lc(rowId=1517,g8) ok
+08-31 02:09:38.829 I/LSPosed-Bridge(12150): [WxAutoReply] [reply][dispatch] Lc(rowId=1517,g8) ok
+08-31 02:09:38.830 I/WxAutoReply(12150): [reply][dispatch] I9(g8) ret=0
+08-31 02:09:38.830 I/LSPosed-Bridge(12150): [WxAutoReply] [reply][dispatch] I9(g8) ret=0
+08-31 02:09:38.831 I/WxAutoReply(12150): [reply][dispatch] rc(g8) ok
+08-31 02:09:38.831 I/LSPosed-Bridge(12150): [WxAutoReply] [reply][dispatch] rc(g8) ok
+08-31 02:09:38.836 I/WxAutoReply(12150): [reply] poke: sender.Mc()
+08-31 02:09:38.836 I/LSPosed-Bridge(12150): [WxAutoReply] [reply] poke: sender.Mc()
+08-31 02:09:38.836 I/WxAutoReply(12150): [reply][after] talker=wxid_jik8ngc61r2222 content=自动回复: 已收到「22」 isSend=1 type=1 status=1 clearSuccess=true
+08-31 02:09:38.836 I/LSPosed-Bridge(12150): [WxAutoReply] [reply][after] talker=wxid_jik8ngc61r2222 content=自动回复: 已收到「22」 isSend=1 type=1 status=1 clearSuccess=true
+08-31 02:09:38.836 I/WxAutoReply(12150): [reply] AutoResponder.send() returned.
+08-31 02:09:38.836 I/LSPosed-Bridge(12150): [WxAutoReply] [reply] AutoResponder.send() returned.
+08-31 02:09:38.836 I/WxAutoReply(12150): [reply] AutoResponder.send() returned.
+08-31 02:09:38.836 I/LSPosed-Bridge(12150): [WxAutoReply] [reply] AutoResponder.send() returned.
+
+

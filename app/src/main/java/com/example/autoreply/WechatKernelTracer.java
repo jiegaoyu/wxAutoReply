@@ -1,248 +1,157 @@
 package com.example.autoreply;
 
-import java.lang.reflect.Member;
-import java.lang.reflect.Method;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import de.robv.android.xposed.XC_MethodHook;
-import de.robv.android.xposed.XposedBridge;
+import de.robv.android.xposed.XposedBridge;   // 用 XposedBridge 来 hookAll*
 import de.robv.android.xposed.XposedHelpers;
 
-public final class WechatKernelTracer {
+public class WechatKernelTracer {
 
-    private static volatile boolean sInstalled = false;
+    // NOTE: 临时关闭去重/节流 => 把这两个变量保留，但先不生效（见 tryTriggerAutoReply）
+    private static final Set<Long> sHandledSvrIds =
+            Collections.newSetFromMap(new ConcurrentHashMap<Long, Boolean>());
+
+    private static final Map<String, Long> sLastReplyTs = new ConcurrentHashMap<>();
+    private static final long REPLY_THROTTLE_MS = 2500L;
 
     public static void install(ClassLoader cl) {
-        if (sInstalled) return;
         try {
-            final Class<?> i8Cls = XposedHelpers.findClass("com.tencent.mm.storage.i8", cl);
-            final Class<?> g8Cls = findG8Class(cl);
+            final Class<?> i8Cls = XposedHelpers.findClassIfExists("com.tencent.mm.storage.i8", cl);
+            final Class<?> g8Cls = XposedHelpers.findClassIfExists("com.tencent.mm.storage.g8", cl);
 
-            // Hb(g8, boolean, boolean)
-            hookHb(i8Cls, g8Cls);
-            hookHb(i8Cls, Object.class); // 兜底
+            if (i8Cls == null || g8Cls == null) {
+                MainHook.w("WechatKernelTracer install skipped: i8=" + i8Cls + " g8=" + g8Cls);
+                return;
+            }
 
-            // tb(g8)
-            hookTb(i8Cls, g8Cls);
-            hookTb(i8Cls, Object.class); // 兜底
+            MainHook.setG8Class(g8Cls);
 
-            // Ic(long, g8, boolean)
-            hookIc(i8Cls, g8Cls);
-            hookIc(i8Cls, Object.class); // 兜底
-
-            XposedBridge.log(MainHook.TAG + " WechatKernelTracer installed.");
-            sInstalled = true;
-        } catch (Throwable t) {
-            XposedBridge.log(MainHook.TAG + " WechatKernelTracer install fail: " + t);
-        }
-    }
-
-    private static Class<?> findG8Class(ClassLoader cl) {
-        try {
-            return XposedHelpers.findClass("com.tencent.mm.storage.g8", cl);
-        } catch (Throwable ignored) {
-            return null;
-        }
-    }
-
-    // region hook Hb
-    private static void hookHb(Class<?> i8Cls, Class<?> g8Param) {
-        try {
-            XposedHelpers.findAndHookMethod(i8Cls, "Hb", g8Param, boolean.class, boolean.class, new XC_MethodHook() {
+            // === Hb(g8, boolean, boolean)
+            XposedBridge.hookAllMethods(i8Cls, "Hb", new XC_MethodHook() {
                 @Override protected void beforeHookedMethod(MethodHookParam param) {
-                    logBefore(param);
-                    try {
-                        final Object g8 = param.args[0];
-                        final boolean a = toBool(param.args[1]);
-                        final boolean b = toBool(param.args[2]);
-
-                        // 入向消息：a=false, b=true
-                        if (!a && b && g8 != null) {
-                            // 先存模板，保证 AutoResponder 能拿到
-                            WechatG8Prototype.saveTemplate(g8);
-
-                            // 取关键信息并触发自动回复
-                            String talker  = getStr(g8, "field_talker", "talker");
-                            String content = getStr(g8, "field_content", "content");
-
-                            // 可选：提前修正时间与 cmid（不会写回，这里只打印）
-                            Long   ct      = getLong(g8, "field_createTime", "createTime");
-                            String cmid    = getStr(g8, "field_clientMsgId", "clientMsgId");
-
-                            XposedBridge.log(MainHook.TAG + " [MSG:IN] talker=" + talker
-                                    + " len=" + (content == null ? 0 : content.length()));
-                            if (ct != null || cmid != null) {
-                                XposedBridge.log(MainHook.TAG + " [proto][verify] talker=" + talker
-                                        + " content=" + content
-                                        + " clientMsgId=" + cmid
-                                        + " createTime=" + ct);
-                            }
-
-                            // 触发自动回复（异步）
-                            AutoResponder.replyAsync(talker, content);
-                        }
-
-                        // 出向的 Hb(true,true) 也保存一下模板，便于后续复用
-                        if (a && b && g8 != null) {
-                            WechatG8Prototype.saveTemplate(g8);
-                        }
-                    } catch (Throwable t) {
-                        XposedBridge.log(MainHook.TAG + " [trace][Hb.before] ex=" + t);
+                    Object g8 = param.args != null && param.args.length > 0 ? param.args[0] : null;
+                    if (g8 != null) {
+                        WechatG8Prototype.saveTemplate(g8);
+                        WechatG8Prototype.learnTalkerId(g8);
+                        MainHook.log("[Hb.before] " + WechatG8Prototype.brief(g8));
+                    }
+                    if (param.thisObject != null && MainHook.sKernelMsgSender == null) {
+                        MainHook.setSender(param.thisObject);
                     }
                 }
-
                 @Override protected void afterHookedMethod(MethodHookParam param) {
-                    logAfter(param);
-                    try {
-                        long ret = toLong(param.getResult());
-                        if (ret > 0) {
-                            Object g8 = param.args[0];
-                            if (g8 != null) {
-                                WechatG8Prototype.saveTemplate(g8);
-                                XposedBridge.log(MainHook.TAG + " [proto] template saved: "
-                                        + g8 + " g8CL@" + System.identityHashCode(g8.getClass()));
-                            }
-                        }
-                    } catch (Throwable t) {
-                        XposedBridge.log(MainHook.TAG + " [trace][Hb.after] ex=" + t);
+                    Object g8 = param.args != null && param.args.length > 0 ? param.args[0] : null;
+                    if (g8 != null) {
+                        WechatG8Prototype.saveTemplate(g8);
+                        WechatG8Prototype.learnTalkerId(g8);
+                        MainHook.log("[Hb.after] " + WechatG8Prototype.brief(g8) +
+                                " ret=" + String.valueOf(param.getResult()));
                     }
                 }
             });
-        } catch (Throwable t) {
-            XposedBridge.log(MainHook.TAG + " [trace] hook fail Hb: " + t);
-        }
-    }
-    // endregion
 
-    // region hook tb
-    private static void hookTb(Class<?> i8Cls, Class<?> g8Param) {
-        try {
-            XposedHelpers.findAndHookMethod(i8Cls, "tb", g8Param, new XC_MethodHook() {
+            // === Ic(rowId, g8, boolean)
+            XposedBridge.hookAllMethods(i8Cls, "Ic", new XC_MethodHook() {
                 @Override protected void beforeHookedMethod(MethodHookParam param) {
-                    logBefore(param);
-                    try {
-                        Object g8 = param.args[0];
-                        if (g8 != null) {
-                            // tb 一般也是入向路径的一部分，这里也保存一遍模板兜底
-                            WechatG8Prototype.saveTemplate(g8);
-                        }
-                    } catch (Throwable t) {
-                        XposedBridge.log(MainHook.TAG + " [trace][tb.before] ex=" + t);
+                    MainHook.log("[trace] BEFORE Ic args=" + argsToString(param.args));
+                    if (param.thisObject != null && MainHook.sKernelMsgSender == null) {
+                        MainHook.setSender(param.thisObject);
                     }
                 }
-
                 @Override protected void afterHookedMethod(MethodHookParam param) {
-                    logAfter(param);
-                    try {
-                        long ret = toLong(param.getResult());
-                        if (ret > 0 && param.args != null && param.args.length > 0) {
-                            Object g8 = param.args[0];
-                            if (g8 != null) {
-                                WechatG8Prototype.saveTemplate(g8);
-                                XposedBridge.log(MainHook.TAG + " [proto] template saved: "
-                                        + g8 + " g8CL@" + System.identityHashCode(g8.getClass()));
-                            }
-                        }
-                    } catch (Throwable t) {
-                        XposedBridge.log(MainHook.TAG + " [trace][tb.after] ex=" + t);
+                    MainHook.log("[trace] AFTER  Ic ret=" + String.valueOf(param.getResult()));
+                }
+            });
+
+            // === tb(g8)
+            XposedBridge.hookAllMethods(i8Cls, "tb", new XC_MethodHook() {
+                @Override protected void beforeHookedMethod(MethodHookParam param) {
+                    Object in = param.args != null && param.args.length > 0 ? param.args[0] : null;
+                    if (in != null) {
+                        WechatG8Prototype.saveTemplate(in);
+                        MainHook.log("[tb.before] in=" + WechatG8Prototype.brief(in) +
+                                " args=" + argsToString(param.args));
+                    }
+                    if (param.thisObject != null && MainHook.sKernelMsgSender == null) {
+                        MainHook.setSender(param.thisObject);
+                    }
+                }
+                @Override protected void afterHookedMethod(MethodHookParam param) {
+                    Object in = param.args != null && param.args.length > 0 ? param.args[0] : null;
+                    MainHook.log("[tb.after] in=" + (in != null ? WechatG8Prototype.brief(in) : "null")
+                            + " ret=" + String.valueOf(param.getResult()));
+                    tryTriggerAutoReply(in);
+                }
+            });
+
+            // === 构造器（更早拿到 sender）
+            XposedBridge.hookAllConstructors(i8Cls, new XC_MethodHook() {
+                @Override protected void afterHookedMethod(MethodHookParam param) {
+                    if (param.thisObject != null && MainHook.sKernelMsgSender == null) {
+                        MainHook.setSender(param.thisObject);
                     }
                 }
             });
+
+            MainHook.log("WechatKernelTracer installed.");
         } catch (Throwable t) {
-            XposedBridge.log(MainHook.TAG + " [trace] hook fail tb: " + t);
+            MainHook.e("WechatKernelTracer install failed", t);
         }
     }
-    // endregion
 
-    // region hook Ic
-    private static void hookIc(Class<?> i8Cls, Class<?> g8Param) {
-        try {
-            XposedHelpers.findAndHookMethod(i8Cls, "Ic", long.class, g8Param, boolean.class, new XC_MethodHook() {
-                @Override protected void beforeHookedMethod(MethodHookParam param) {
-                    logBefore(param);
-                }
-                @Override protected void afterHookedMethod(MethodHookParam param) {
-                    logAfter(param);
-                }
-            });
-        } catch (Throwable t) {
-            XposedBridge.log(MainHook.TAG + " [trace] hook fail Ic: " + t);
-        }
-    }
-    // endregion
+    /* ============ 自动回复触发 ============ */
+    private static void tryTriggerAutoReply(Object g8) {
+        if (g8 == null) return;
 
-    // region helpers: logging & field access
-    private static void logBefore(XC_MethodHook.MethodHookParam param) {
-        try {
-            Member m = param.method;
-            String owner = (m != null && m.getDeclaringClass() != null)
-                    ? m.getDeclaringClass().getName() : "?";
-            String name = (m != null) ? m.getName() : "?";
-            XposedBridge.log(MainHook.TAG + " [trace] BEFORE " + owner + "." + name
-                    + " args=" + safeArgs(param.args));
-        } catch (Throwable ignored) {}
-    }
+        Integer isSend  = WechatG8Prototype.readIntBoxed(g8, "field_isSend");
+        Integer type    = WechatG8Prototype.readIntBoxed(g8, "field_type");
+        String  talker  = WechatG8Prototype.readString(g8, "field_talker");
+        String  content = WechatG8Prototype.readString(g8, "field_content");
+        Long    svrId   = WechatG8Prototype.readLongBoxed(g8, "field_msgSvrId");
+        Integer status  = WechatG8Prototype.readIntBoxed(g8, "field_status");
 
-    private static void logAfter(XC_MethodHook.MethodHookParam param) {
-        try {
-            Member m = param.method;
-            String owner = (m != null && m.getDeclaringClass() != null)
-                    ? m.getDeclaringClass().getName() : "?";
-            String name = (m != null) ? m.getName() : "?";
-            XposedBridge.log(MainHook.TAG + " [trace] AFTER  " + owner + "." + name
-                    + " ret=" + String.valueOf(param.getResult()));
-        } catch (Throwable ignored) {}
+        // 只处理 “收到的文本消息且 status==3(已入库/收取完成)” 的场景
+        if (isSend == null || type == null || talker == null) return;
+        if (isSend != 0 || type != 1) return;
+        if (status != null && status != 3) return;
+
+        // —— 临时关闭去重/节流以定位问题 —— //
+        // if (svrId != null && svrId > 0 && !sHandledSvrIds.add(svrId)) return;
+        // long now = System.currentTimeMillis();
+        // Long last = sLastReplyTs.get(talker);
+        // if (last != null && (now - last) < REPLY_THROTTLE_MS) return;
+        // sLastReplyTs.put(talker, now);
+
+        String reply = "自动回复: 已收到「" + (content == null ? "" : content) + "」";
+        MainHook.log("[reply][verify] talker=" + talker + " content=" + reply);
+
+        // 关键定位点：进入 send 前后都打日志
+        MainHook.log("[reply] calling AutoResponder.send() …");
+        AutoResponder.send(talker, reply);
+        MainHook.log("[reply] AutoResponder.send() returned.");
     }
 
-    private static String safeArgs(Object[] args) {
-        if (args == null) return "null";
-        StringBuilder sb = new StringBuilder("[");
+    /* ============ 小工具 ============ */
+    private static String argsToString(Object[] args) {
+        if (args == null) return "[]";
+        StringBuilder sb = new StringBuilder(64);
+        sb.append("[");
         for (int i = 0; i < args.length; i++) {
             Object a = args[i];
             if (i > 0) sb.append(", ");
-            if (a == null) {
-                sb.append("null");
+            if (a == null) { sb.append("null"); continue; }
+            String s = a.toString();
+            if (s.startsWith("com.tencent.mm.storage.g8@")) {
+                sb.append("g8");
             } else {
-                String s = a.toString();
-                // 避免一次性把 g8 全字段 dump 出来，截断一下
-                if (s.length() > 120) s = s.substring(0, 120) + "...";
                 sb.append(s);
             }
         }
-        return sb.append("]").toString();
+        sb.append("]");
+        return sb.toString();
     }
-
-    private static boolean toBool(Object o) {
-        return (o instanceof Boolean) ? (Boolean) o : false;
-    }
-
-    private static long toLong(Object o) {
-        if (o instanceof Long) return (Long) o;
-        if (o instanceof Integer) return ((Integer) o).longValue();
-        try { return Long.parseLong(String.valueOf(o)); } catch (Throwable ignored) {}
-        return 0L;
-    }
-
-    private static String getStr(Object obj, String... names) {
-        for (String n : names) {
-            try {
-                Object v = XposedHelpers.getObjectField(obj, n);
-                if (v != null) return String.valueOf(v);
-            } catch (Throwable ignored) {}
-        }
-        return null;
-    }
-
-    private static Long getLong(Object obj, String... names) {
-        for (String n : names) {
-            try {
-                Object v = XposedHelpers.getObjectField(obj, n);
-                if (v instanceof Long) return (Long) v;
-                if (v instanceof Integer) return ((Integer) v).longValue();
-                if (v != null) return Long.parseLong(String.valueOf(v));
-            } catch (Throwable ignored) {}
-        }
-        return null;
-    }
-    // endregion
 }
-

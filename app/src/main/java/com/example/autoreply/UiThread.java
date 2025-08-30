@@ -3,32 +3,19 @@ package com.example.autoreply;
 import android.os.Handler;
 import android.os.Looper;
 
-import java.util.concurrent.CountDownLatch;
-
+/** 把任务丢到主线程执行的小工具 */
 public final class UiThread {
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
 
     private UiThread() {}
 
-    /** 在主线程同步执行 runnable，返回是否成功执行（捕获异常不抛出） */
-    public static boolean runSync(Runnable r) {
+    public static void run(Runnable r) {
+        if (r == null) return;
         if (Looper.myLooper() == Looper.getMainLooper()) {
-            try { r.run(); return true; } catch (Throwable t) { return false; }
+            r.run();
+        } else {
+            MAIN.post(r);
         }
-        final CountDownLatch latch = new CountDownLatch(1);
-        final boolean[] ok = { true };
-        MAIN.post(() -> {
-            try { r.run(); }
-            catch (Throwable t) { ok[0] = false; }
-            finally { latch.countDown(); }
-        });
-        try { latch.await(); } catch (InterruptedException ignored) {}
-        return ok[0];
-    }
-
-    /** 主线程异步投递 */
-    public static void post(Runnable r) {
-        MAIN.post(r);
     }
 }
 
