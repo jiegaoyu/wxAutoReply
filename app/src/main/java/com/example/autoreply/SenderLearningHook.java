@@ -6,54 +6,76 @@ import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 
-/**
- * 通过 hookAllMethods(i8, "Hb") 学习：
- *  - sender 实例 (param.thisObject)
- *  - g8 实体类 (param.args[0].getClass())
- * 学到后再延迟安装 KernelSendTracer（避免精确签名找不到导致报错）
- */
 public final class SenderLearningHook {
-    private static final AtomicBoolean INSTALLED = new AtomicBoolean(false);
 
-    private SenderLearningHook() {}
+    public static volatile Object sSenderInstance = null;
+    public static volatile Class<?> sG8Class = null;
+
+    private static final AtomicBoolean sInstalled = new AtomicBoolean(false);
+    private static final AtomicBoolean sTracerInstalled = new AtomicBoolean(false);
 
     public static void install(final ClassLoader cl) {
-        if (cl == null) return;
-        if (!INSTALLED.compareAndSet(false, true)) return;
+        if (!sInstalled.compareAndSet(false, true)) return;
 
         try {
-            final Class<?> i8 = cl.loadClass("com.tencent.mm.storage.i8");
+            final Class<?> i8Cls = XposedHelpers.findClass("com.tencent.mm.storage.i8", cl);
 
-            // 不再使用 findAndHookMethod(Object.class,...)；改为 hookAllMethods
-            XposedBridge.hookAllMethods(i8, "Hb", new XC_MethodHook() {
-                @Override
-                protected void beforeHookedMethod(MethodHookParam param) {
-                    try {
-                        // 学 sender
-                        if (MainHook.sKernelMsgSender == null && param.thisObject != null) {
-                            MainHook.sKernelMsgSender = param.thisObject;
-                            XposedBridge.log(MainHook.TAG + " [learn] sender instance learned: "
-                                    + param.thisObject.getClass().getName());
+            XC_MethodHook learnHook = new XC_MethodHook() {
+                @Override protected void beforeHookedMethod(MethodHookParam param) {
+                    Object sender = param.thisObject;
+                    if (sender != null && sSenderInstance == null) {
+                        sSenderInstance = sender;
+                        XposedBridge.log(MainHook.TAG + " [learn] sender instance learned: " + sender.getClass().getName());
+                    }
+                    if (param.args != null) {
+                        for (Object a : param.args) {
+                            if (a != null && a.getClass().getName().endsWith(".g8")) {
+                                if (sG8Class == null) {
+                                    sG8Class = a.getClass();
+                                    XposedBridge.log(MainHook.TAG + " [learn] g8 class: " + sG8Class.getName());
+                                }
+                            }
                         }
-                        // 学 g8 类
-                        if (MainHook.sKernelMsgEntityCls == null
-                                && param.args != null && param.args.length > 0 && param.args[0] != null) {
-                            MainHook.sKernelMsgEntityCls = param.args[0].getClass();
-                            XposedBridge.log(MainHook.TAG + " [learn] g8 class: "
-                                    + MainHook.sKernelMsgEntityCls.getName());
-                        }
+                    }
 
-                        // 条件满足再装 tracer（只装一次）
-                        if (WechatKernelSender.isReady()) {
-                            KernelSendTracer.install(cl);
+                    if (sSenderInstance != null && sG8Class != null && sTracerInstalled.compareAndSet(false, true)) {
+                        try {
+                            WechatKernelTracer.install(cl);
+                            XposedBridge.log(MainHook.TAG + " WechatKernelTracer installed.");
+                        } catch (Throwable t) {
+                            XposedBridge.log(MainHook.TAG + " WechatKernelTracer install fail: " + t);
                         }
-                    } catch (Throwable t) {
-                        XposedBridge.log(MainHook.TAG + " SenderLearningHook error: " + t);
                     }
                 }
-            });
+            };
 
-            XposedBridge.log(MainHook.TAG + " SenderLearningHook install OK (via hookAllMethods Hb).");
+            // hook Hb(g8, boolean, boolean)
+            try {
+                XposedHelpers.findAndHookMethod(i8Cls, "Hb",
+                        Object.class, boolean.class, boolean.class, learnHook);
+            } catch (Throwable t) {
+                try {
+                    XposedHelpers.findAndHookMethod("com.tencent.mm.storage.i8", cl,
+                            "Hb", XposedHelpers.findClass("com.tencent.mm.storage.g8", cl),
+                            boolean.class, boolean.class, learnHook);
+                } catch (Throwable t2) {
+                    XposedBridge.log(MainHook.TAG + " SenderLearningHook Hb hook fail: " + t2);
+                }
+            }
+
+            // hook tb(g8)
+            try {
+                XposedHelpers.findAndHookMethod(i8Cls, "tb", Object.class, learnHook);
+            } catch (Throwable t) {
+                try {
+                    XposedHelpers.findAndHookMethod("com.tencent.mm.storage.i8", cl,
+                            "tb", XposedHelpers.findClass("com.tencent.mm.storage.g8", cl),
+                            learnHook);
+                } catch (Throwable t2) {
+                    XposedBridge.log(MainHook.TAG + " SenderLearningHook tb hook fail: " + t2);
+                }
+            }
+
         } catch (Throwable t) {
             XposedBridge.log(MainHook.TAG + " SenderLearningHook install fail: " + t);
         }
