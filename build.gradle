@@ -1,0 +1,5 @@
+/* 仅声明，不应用，避免此时解析插件失败 */
+plugins {
+  id "com.android.application" version "8.8.1" apply false
+}
+

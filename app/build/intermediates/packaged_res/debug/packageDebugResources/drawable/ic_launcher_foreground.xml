@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- 外圈 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,6a48,48 0 1,0 0,96a48,48 0 1,0 0,-96z"/>
+    <!-- 中心 L 字母占位（LongPress 的 L） -->
+    <path
+        android:fillColor="#263238"
+        android:pathData="M42,30 L58,30 L58,38 L50,38 L50,78 L42,78 Z"/>
+</vector>
+
+

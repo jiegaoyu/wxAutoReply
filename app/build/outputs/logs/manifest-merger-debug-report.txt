@@ -1,0 +1,49 @@
+-- Merging decision tree log ---
+manifest
+ADDED from /home/yujiegao/gao/project/wxAutoReply/app/src/main/AndroidManifest.xml:1:1-10:12
+INJECTED from /home/yujiegao/gao/project/wxAutoReply/app/src/main/AndroidManifest.xml:1:1-10:12
+INJECTED from /home/yujiegao/gao/project/wxAutoReply/app/src/main/AndroidManifest.xml:1:1-10:12
+INJECTED from /home/yujiegao/gao/project/wxAutoReply/app/src/main/AndroidManifest.xml:1:1-10:12
+	package
+		INJECTED from /home/yujiegao/gao/project/wxAutoReply/app/src/main/AndroidManifest.xml
+	android:versionName
+		INJECTED from /home/yujiegao/gao/project/wxAutoReply/app/src/main/AndroidManifest.xml
+	android:versionCode
+		INJECTED from /home/yujiegao/gao/project/wxAutoReply/app/src/main/AndroidManifest.xml
+	xmlns:android
+		ADDED from /home/yujiegao/gao/project/wxAutoReply/app/src/main/AndroidManifest.xml:1:11-69
+application
+ADDED from /home/yujiegao/gao/project/wxAutoReply/app/src/main/AndroidManifest.xml:3:5-8:19
+INJECTED from /home/yujiegao/gao/project/wxAutoReply/app/src/main/AndroidManifest.xml:3:5-8:19
+	android:extractNativeLibs
+		INJECTED from /home/yujiegao/gao/project/wxAutoReply/app/src/main/AndroidManifest.xml
+	android:label
+		ADDED from /home/yujiegao/gao/project/wxAutoReply/app/src/main/AndroidManifest.xml:3:18-45
+	android:icon
+		ADDED from /home/yujiegao/gao/project/wxAutoReply/app/src/main/AndroidManifest.xml:4:9-43
+meta-data#xposedmodule
+ADDED from /home/yujiegao/gao/project/wxAutoReply/app/src/main/AndroidManifest.xml:5:9-70
+	android:value
+		ADDED from /home/yujiegao/gao/project/wxAutoReply/app/src/main/AndroidManifest.xml:5:48-68
+	android:name
+		ADDED from /home/yujiegao/gao/project/wxAutoReply/app/src/main/AndroidManifest.xml:5:20-47
+meta-data#xposeddescription
+ADDED from /home/yujiegao/gao/project/wxAutoReply/app/src/main/AndroidManifest.xml:6:9-87
+	android:value
+		ADDED from /home/yujiegao/gao/project/wxAutoReply/app/src/main/AndroidManifest.xml:6:53-85
+	android:name
+		ADDED from /home/yujiegao/gao/project/wxAutoReply/app/src/main/AndroidManifest.xml:6:20-52
+meta-data#xposedminversion
+ADDED from /home/yujiegao/gao/project/wxAutoReply/app/src/main/AndroidManifest.xml:7:9-72
+	android:value
+		ADDED from /home/yujiegao/gao/project/wxAutoReply/app/src/main/AndroidManifest.xml:7:52-70
+	android:name
+		ADDED from /home/yujiegao/gao/project/wxAutoReply/app/src/main/AndroidManifest.xml:7:20-51
+uses-sdk
+INJECTED from /home/yujiegao/gao/project/wxAutoReply/app/src/main/AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from /home/yujiegao/gao/project/wxAutoReply/app/src/main/AndroidManifest.xml
+INJECTED from /home/yujiegao/gao/project/wxAutoReply/app/src/main/AndroidManifest.xml
+	android:targetSdkVersion
+		INJECTED from /home/yujiegao/gao/project/wxAutoReply/app/src/main/AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from /home/yujiegao/gao/project/wxAutoReply/app/src/main/AndroidManifest.xml
