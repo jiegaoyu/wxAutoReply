@@ -44,11 +44,16 @@ public class AutoResponder {
 
             // 1) 模板克隆
             final Object g8 = WechatG8Prototype.cloneAndPatch(talker, text);
-            if (g8 == null) { XposedBridge.log(MainHook.TAG + " [send:A] no template g8; skip send"); return; }
+            if (g8 == null) { 
+            
+            XposedBridge.log(MainHook.TAG + " [send:A] no template g8; skip send"); return; }
+            
+            WechatG8Prototype.dumpForDebug(g8);
 
             // 2) 先 Hb 拿序号（必须主线程）
             final long[] seqBox = { -1 };
             MainHook.runOnMainSync(() -> {
+            WechatG8Prototype.dumpForDebug(g8);
                 long seq = WechatKernelSender.callHbAndGetSeq(sender, g8, true, true);
                 seqBox[0] = seq;
             });

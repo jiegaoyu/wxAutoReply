@@ -58,6 +58,7 @@ public class WechatG8Prototype {
                     + " content=" + readStr(newG8,"content")
                     + " clientMsgId=" + readStr(newG8,"clientMsgId")
                     + " createTime=" + readLong(newG8,"createTime"));
+dumpForDebug(newG8);
 
             return newG8;
         } catch (Throwable t) {
@@ -74,5 +75,32 @@ public class WechatG8Prototype {
         try { return XposedHelpers.getLongField(obj, f); }
         catch (Throwable ignored) { return null; }
     }
+    
+    // 在文件顶部已有：package com.example.autoreply; 以及 XposedHelpers 的 import
+
+public static void dumpForDebug(Object g8) {
+    try {
+        String talker = (String) tryGetAny(g8, "talker", "field_talker", "Z1");
+        String content = (String) tryGetAny(g8, "content", "field_content", "a2");
+        String clientMsgId = (String) tryGetAny(g8, "clientMsgId", "field_clientMsgId", "b2");
+        Long createTime = (Long) tryGetAny(g8, "createTime", "field_createTime");
+        XposedBridge.log(MainHook.TAG + " [proto][verify] talker=" + talker
+                + " content=" + content
+                + " clientMsgId=" + clientMsgId
+                + " createTime=" + createTime);
+    } catch (Throwable t) {
+        XposedBridge.log(MainHook.TAG + " [proto][verify] dump error: " + t);
+    }
+}
+
+// 这个工具方法放在本类里（若尚未存在）
+private static Object tryGetAny(Object obj, String... names) {
+    for (String n : names) {
+        try { return XposedHelpers.getObjectField(obj, n); } catch (Throwable ignored) {}
+        try { return XposedHelpers.callMethod(obj, "get" + Character.toUpperCase(n.charAt(0)) + n.substring(1)); } catch (Throwable ignored) {}
+    }
+    return null;
+}
+
 }
 
