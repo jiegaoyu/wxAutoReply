@@ -1,124 +1,137 @@
 package com.example.autoreply;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 
-public class WechatKernelSender {
-    private static final String TAG = MainHook.TAG;
+public final class WechatKernelSender {
 
-    /** 发送前置：是否已学到 sender / g8 */
+    private WechatKernelSender() {}
+
+    /** 供 SenderLearningHook / KernelSendTracer 调用：是否可发送 */
     public static boolean isReady() {
-        return MainHook.sKernelMsgSender != null && MainHook.sKernelMsgEntityCls != null;
-    }
-
-    /** 从 i8 实例里“学习” sender（通常在 Hb/tb 被 hook 到时调用） */
-    public static boolean learnSenderIfNull(Object maybeSender) {
-        if (maybeSender == null) return false;
-        if (MainHook.sKernelMsgSender == null) {
-            MainHook.sKernelMsgSender = maybeSender;
-            XposedBridge.log(TAG + " [learn] sender instance learned: " + maybeSender.getClass().getName());
-            return true;
+        boolean ok = (MainHook.sKernelMsgSender != null && MainHook.sKernelMsgEntityCls != null);
+        if (!ok) {
+            XposedBridge.log(MainHook.TAG + " [ready?] sender=" + MainHook.sKernelMsgSender
+                    + " g8=" + MainHook.sKernelMsgEntityCls);
         }
-        return false;
+        return ok;
     }
 
-    /** 从 CL 里“学习” g8 类 */
-    public static void learnEntityClassIfNull(ClassLoader cl) {
-        if (MainHook.sKernelMsgEntityCls == null) {
-            try {
-                Class<?> g8 = XposedHelpers.findClassIfExists("com.tencent.mm.storage.g8", cl);
-                if (g8 != null) {
-                    MainHook.sKernelMsgEntityCls = g8;
-                    XposedBridge.log(TAG + " [learn] g8 class: " + g8.getName());
-                }
-            } catch (Throwable ignored) {}
-        }
-    }
-
-    /** 直接调用 Hb(g8, boolean, boolean)，返回 seq，>0 表示入队成功 */
+    /** Hb：返回 seq；异常时返回 <=0 */
     public static long callHbAndGetSeq(Object sender, Object g8, boolean a, boolean b) {
-        if (sender == null || g8 == null) return -1;
         try {
-            Object ret = XposedHelpers.callMethod(sender, "Hb", g8, a, b);
-            long seq = castLong(ret);
-            XposedBridge.log(TAG + " [send:A] Hb ret=" + seq);
+            Method hb = XposedHelpers.findMethodExactIfExists(
+                    sender.getClass(), "Hb",
+                    g8.getClass(), boolean.class, boolean.class);
+            if (hb == null) {
+                XposedBridge.log(MainHook.TAG + " [trace] Hb not found on " + sender.getClass());
+                return -1;
+            }
+            Object ret = hb.invoke(sender, g8, a, b);
+            long seq = (ret instanceof Number) ? ((Number) ret).longValue() : -1L;
+            XposedBridge.log(MainHook.TAG + " [send:A] Hb ret=" + seq);
             return seq;
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " [send:A] Hb exception: " + t);
+            XposedBridge.log(MainHook.TAG + " [send:A] Hb exception " + t);
             return -1;
         }
     }
 
-    /** 调用 Ic(seq, g8, true) 保障出队 */
-    public static int callIc(Object sender, long seq, Object g8, boolean commit) {
-        if (sender == null || g8 == null || seq <= 0) return 0;
+    /** Ic：出队；>0 视为成功 */
+    public static int callIc(Object sender, long seq, Object g8, boolean flag) {
         try {
-            Object ret = XposedHelpers.callMethod(sender, "Ic", seq, g8, commit);
-            int rc = castInt(ret);
-            XposedBridge.log(TAG + " [send:A] Ic ret=" + rc);
+            Method ic = XposedHelpers.findMethodExactIfExists(
+                    sender.getClass(), "Ic",
+                    long.class, g8.getClass(), boolean.class);
+            if (ic == null) {
+                XposedBridge.log(MainHook.TAG + " [trace] Ic not found on " + sender.getClass());
+                return 0;
+            }
+            Object ret = ic.invoke(sender, seq, g8, flag);
+            int rc = (ret instanceof Number) ? ((Number) ret).intValue() : 0;
+            XposedBridge.log(MainHook.TAG + " [send:A] Ic ret=" + rc);
             return rc;
         } catch (Throwable t) {
-            XposedBridge.log(TAG + " [send:A] Ic exception: " + t);
+            XposedBridge.log(MainHook.TAG + " [send:A] Ic exception " + t);
             return 0;
         }
     }
 
-    /** Ic 失败时兜底打一枪（U9 或 Rc 其一） */
+    /** 兜底一次：U9 或 Rc 二选一打一枪 */
     public static int tryU9OrRcOnce(Object sender, Object g8) {
-        if (sender == null || g8 == null) return 0;
-        // 优先 U9
-        try {
-            Object ret = XposedHelpers.callMethod(sender, "U9", g8);
-            int rc = castInt(ret);
-            if (rc != 0) return rc;
-        } catch (Throwable ignored) {}
-        // 再试 Rc
-        try {
-            Object ret = XposedHelpers.callMethod(sender, "Rc", g8);
-            return castInt(ret);
-        } catch (Throwable ignored) {}
+        for (String name : new String[]{"U9", "Rc"}) {
+            try {
+                Method m = XposedHelpers.findMethodExactIfExists(
+                        sender.getClass(), name, g8.getClass());
+                if (m != null) {
+                    Object ret = m.invoke(sender, g8);
+                    int rc = (ret instanceof Number) ? ((Number) ret).intValue() : 0;
+                    if (rc > 0) return rc;
+                }
+            } catch (Throwable ignored) {}
+        }
         return 0;
     }
 
-    /** 解决“回到桌面再回来才发出”的关键：主动唤醒 sender 的通知 */
-    public static void pokeUi(Object sender) {
-        if (sender == null) return;
-        try {
-            // 微信内核里常见的方法名是 doNotify / notifyDataSetChanged 之类，这里用 doNotify。
-            XposedHelpers.callMethod(sender, "doNotify");
-            XposedBridge.log(TAG + " [poke] sender.doNotify()");
-        } catch (Throwable t) {
-            // 容错：有些版本方法名或者可见性不同，静默忽略
-            XposedBridge.log(TAG + " [poke] doNotify() not available: " + t);
-        }
-    }
-
-    /** 兼容 AutoResponder 里已有的调用名 */
+    /**
+     * 立刻“唤醒/刷新”发送队列。
+     * 先按常见名尝试；不命中则枚举零参 void 方法，优先 Mc()。
+     */
     public static void pokeNotify(Object sender) {
-        pokeUi(sender);
-    }
+        if (sender == null) return;
 
-    // —— 工具方法 ——
-    private static long castLong(Object o) {
-        if (o == null) return 0;
-        if (o instanceof Long) return (Long) o;
-        if (o instanceof Integer) return ((Integer) o).longValue();
-        try { return Long.parseLong(String.valueOf(o)); } catch (Throwable ignored) {}
-        return 0;
-    }
-
-    private static int castInt(Object o) {
-        if (o == null) return 0;
-        if (o instanceof Integer) return (Integer) o;
-        if (o instanceof Long) {
-            long v = (Long) o;
-            if (v > Integer.MAX_VALUE) return 1; // 只关心“是否非零”
-            return (int) v;
+        // 1) 常见唤醒名
+        ArrayList<String> common = new ArrayList<>(Arrays.asList(
+                "doNotify", "notifyQueue", "notifyAllPending",
+                "flush", "tick", "poke", "wake", "pulse",
+                "Mc", "Nc", "Qc", "Rc0", "W9", "WA"
+        ));
+        for (String n : common) {
+            try {
+                Method m = XposedHelpers.findMethodExactIfExists(sender.getClass(), n);
+                if (m != null && m.getParameterTypes().length == 0
+                        && m.getReturnType() == void.class) {
+                    m.setAccessible(true);
+                    m.invoke(sender);
+                    XposedBridge.log(MainHook.TAG + " [poke] sender." + n + "()");
+                    return;
+                }
+            } catch (Throwable ignored) {}
         }
-        try { return Integer.parseInt(String.valueOf(o)); } catch (Throwable ignored) {}
-        return 0;
+
+        // 2) 枚举零参 void 方法，排除明显无关
+        try {
+            Method[] ms = sender.getClass().getDeclaredMethods();
+            Method candidate = null;
+            for (Method m : ms) {
+                if (m.getParameterTypes().length != 0) continue;
+                if (m.getReturnType() != void.class) continue;
+                String nm = m.getName();
+                if (Modifier.isStatic(m.getModifiers())) continue;
+                if ("wait".equals(nm) || "notify".equals(nm) || "notifyAll".equals(nm)
+                        || "lock".equals(nm) || "unlock".equals(nm)
+                        || "finalize".equals(nm) || "toString".equals(nm)
+                        || "hashCode".equals(nm) || "getClass".equals(nm)) {
+                    continue;
+                }
+                if ("Mc".equals(nm)) { candidate = m; break; }
+                if (candidate == null) candidate = m;
+            }
+            if (candidate != null) {
+                candidate.setAccessible(true);
+                candidate.invoke(sender);
+                XposedBridge.log(MainHook.TAG + " [poke] sender." + candidate.getName() + "()");
+            } else {
+                XposedBridge.log(MainHook.TAG + " [poke] no notifier-like method matched");
+            }
+        } catch (Throwable t) {
+            XposedBridge.log(MainHook.TAG + " [poke] enumerate failed: " + t);
+        }
     }
 }
 
