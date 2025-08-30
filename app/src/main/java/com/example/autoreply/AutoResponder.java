@@ -1,19 +1,19 @@
 package com.example.autoreply;
 
-import android.os.Handler;
-import android.os.Looper;
 import android.text.TextUtils;
 
 import java.util.concurrent.ConcurrentHashMap;
 
 import de.robv.android.xposed.XposedBridge;
-import de.robv.android.xposed.XposedHelpers;
 
 public class AutoResponder {
 
     private static final ConcurrentHashMap<String, Long> LAST_SENT = new ConcurrentHashMap<>();
-    private static final long DEDUP_WINDOW_MS = 3000; // 3s
-    private static final Handler MAIN = new Handler(Looper.getMainLooper());
+    private static final long DEDUP_WINDOW_MS = 3000;
+
+    private static final ThreadLocal<Boolean> SENDING = new ThreadLocal<>();
+
+    private static boolean isSending() { return Boolean.TRUE.equals(SENDING.get()); }
 
     public static void replyAsync(final String talker, final String text) {
         if (TextUtils.isEmpty(talker) || TextUtils.isEmpty(text)) {
@@ -29,67 +29,52 @@ public class AutoResponder {
         }
         LAST_SENT.put(key, now);
 
-        new Thread(() -> doReplyOnMain(talker, text)).start();
+        new Thread(() -> replyOnce(talker, text)).start();
     }
 
-    /** 把 Hb / Ic 顺序放到主线程执行，并在 Ic 后 poke 主线程调度 */
-    private static void doReplyOnMain(final String talker, final String text) {
+    private static void replyOnce(String talker, String text) {
+        if (isSending()) return;
+        SENDING.set(true);
         try {
-            // 1) 克隆模板并打补丁
-            final Object[] holder = new Object[1];
-            boolean okProto = MainHook.runOnMainSync(() -> holder[0] = WechatG8Prototype.cloneAndPatch(talker, text));
-            if (!okProto || holder[0] == null) {
-                XposedBridge.log(MainHook.TAG + " [send:A] no template g8; skip");
+            Object sender = MainHook.sKernelMsgSender;
+            if (sender == null || MainHook.sKernelMsgEntityCls == null) {
+                XposedBridge.log(MainHook.TAG + " [reply] sender/entity not ready");
                 return;
             }
-            final Object g8 = holder[0];
 
-            // 2) Hb 拿 seq
-            final long[] seqBox = new long[1];
-            boolean okHb = MainHook.runOnMainSync(() ->
-                    seqBox[0] = WechatKernelSender.callHbAndGetSeq(MainHook.sKernelMsgSender, g8, true, true)
-            );
-            long seq = okHb ? seqBox[0] : -1;
-            XposedBridge.log(MainHook.TAG + " [send:A] Hb ret=" + seq);
+            // 1) 模板克隆
+            final Object g8 = WechatG8Prototype.cloneAndPatch(talker, text);
+            if (g8 == null) { XposedBridge.log(MainHook.TAG + " [send:A] no template g8; skip send"); return; }
+
+            // 2) 先 Hb 拿序号（必须主线程）
+            final long[] seqBox = { -1 };
+            MainHook.runOnMainSync(() -> {
+                long seq = WechatKernelSender.callHbAndGetSeq(sender, g8, true, true);
+                seqBox[0] = seq;
+            });
+            long seq = seqBox[0];
             if (seq <= 0) return;
 
-            // 3) 主线程小延迟后 Ic（模拟切前台调度tick）
-            MAIN.postDelayed(() -> {
-                try {
-                    int ic = WechatKernelSender.callIc(MainHook.sKernelMsgSender, seq, g8, true);
-                    XposedBridge.log(MainHook.TAG + " [send:A] Ic ret=" + ic);
-                    if (ic <= 0) {
-                        int alt = WechatKernelSender.tryU9OrRcOnce(MainHook.sKernelMsgSender, g8);
-                        XposedBridge.log(MainHook.TAG + " [send:A] Ic<=0 fallback ret=" + alt);
-                    }
-                    pokeMain();
-                    XposedBridge.log(MainHook.TAG + " [reply] -> " + talker + " ok=true path=A/Hb+Ic");
-                } catch (Throwable t) {
-                    XposedBridge.log(MainHook.TAG + " [reply] Ic error: " + t);
-                }
-            }, 160);
+            // 3) 延迟 120~240ms，避免与模板完全重合
+            try { Thread.sleep(120 + (long)(Math.random()*120)); } catch (Throwable ignored) {}
+
+            // 4) Ic 出队（主线程）
+            final int[] icBox = { -1 };
+            MainHook.runOnMainSync(() -> {
+                int r = WechatKernelSender.callIc(sender, seq, g8, true);
+                icBox[0] = r;
+                WechatKernelSender.pokeNotify(sender); // 关键：立刻唤醒队列，解决“要回桌面才发送”的问题
+            });
+
+            if (icBox[0] <= 0) {
+                WechatKernelSender.tryU9OrRcOnce(sender, g8);
+            }
+
+            XposedBridge.log(MainHook.TAG + " [reply] -> " + talker + " ok=true path=A/Hb+Ic");
         } catch (Throwable t) {
             XposedBridge.log(MainHook.TAG + " [reply] exception: " + t);
-        }
-    }
-
-    /** 尝试唤醒/刷新发送管线，等价于切回前台时的那个“心跳” */
-    private static void pokeMain() {
-        try {
-            final Object sender = MainHook.sKernelMsgSender;
-            if (sender != null) {
-                String[] ms = new String[]{"notifyDataSetChanged", "doNotify", "flush", "G0", "p0"};
-                for (String m : ms) {
-                    try {
-                        XposedHelpers.callMethod(sender, m);
-                        XposedBridge.log(MainHook.TAG + " [poke] sender." + m + "()");
-                        return;
-                    } catch (Throwable ignored) {}
-                }
-            }
-            MAIN.post(() -> {});
-        } catch (Throwable t) {
-            XposedBridge.log(MainHook.TAG + " [poke] error: " + t);
+        } finally {
+            SENDING.remove();
         }
     }
 }

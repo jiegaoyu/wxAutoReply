@@ -1,91 +1,65 @@
 package com.example.autoreply;
 
-import java.lang.reflect.Method;
-import java.util.Arrays;
+import java.lang.reflect.Member;
 
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
 
-public final class KernelSendTracer {
-    private KernelSendTracer() {}
+import static de.robv.android.xposed.XposedHelpers.findAndHookMethod;
+
+public class KernelSendTracer {
+    private static volatile boolean INSTALLED = false;
 
     public static void install(ClassLoader cl) {
+        if (INSTALLED || cl == null) return;
         try {
-            if (MainHook.sKernelMsgSender == null || MainHook.sKernelMsgEntityCls == null) {
-                XposedBridge.log(MainHook.TAG + " [trace] skip: sender/entity not learned yet");
-                return;
-            }
-            final Object  sender = MainHook.sKernelMsgSender;
-            final Class<?> i8Cls = sender.getClass();
-            final Class<?> g8Cls = MainHook.sKernelMsgEntityCls;
+            Class<?> i8 = cl.loadClass("com.tencent.mm.storage.i8");
 
-            Method[] methods = i8Cls.getDeclaredMethods();
-            int hooked = 0;
-            for (Method m : methods) {
-                Class<?>[] ps = m.getParameterTypes();
-                if (ps.length == 0) continue;
-                if (ps[0] != g8Cls) continue; // 只追踪形如 (g8, ...) 的方法
-
-                try {
-                    m.setAccessible(true); // 关键：避免反射访问受限
-                    XposedBridge.hookMethod(m, new XC_MethodHook() {
-                        @Override protected void beforeHookedMethod(MethodHookParam param) {
-                            try {
-                                XposedBridge.log(MainHook.TAG + " [trace] BEFORE "
-                                        + sig(m) + " args=" + previewArgs(param.args, g8Cls));
-                            } catch (Throwable ignored) {}
-                        }
-                        @Override protected void afterHookedMethod(MethodHookParam param) {
-                            try {
-                                Object ret = param.getResult();
-                                XposedBridge.log(MainHook.TAG + " [trace] AFTER  "
-                                        + sig(m) + " ret=" + String.valueOf(ret));
-                            } catch (Throwable ignored) {}
-                        }
-                    });
-                    hooked++;
-                } catch (Throwable t) {
-                    XposedBridge.log(MainHook.TAG + " [trace] hook fail " + m + " : " + t);
+            XC_MethodHook hook = new XC_MethodHook() {
+                @Override protected void beforeHookedMethod(MethodHookParam param) {
+                    try {
+                        Member m = param.method;
+                        String retType = (m instanceof java.lang.reflect.Method)
+                                ? ((java.lang.reflect.Method) m).getReturnType().getSimpleName()
+                                : "void";
+                        XposedBridge.log(MainHook.TAG + " [trace] BEFORE " + retType + " "
+                                + m.getName() + "(...)");
+                    } catch (Throwable ignored) {}
                 }
-            }
-            XposedBridge.log(MainHook.TAG + " [trace] installed on i8=" + i8Cls.getName()
-                    + ", traced methods=" + hooked);
-        } catch (Throwable t) {
-            XposedBridge.log(MainHook.TAG + " [trace] install failed: " + t);
-        }
-    }
+                @Override protected void afterHookedMethod(MethodHookParam param) {
+                    try {
+                        Member m = param.method;
+                        String retType = (m instanceof java.lang.reflect.Method)
+                                ? ((java.lang.reflect.Method) m).getReturnType().getSimpleName()
+                                : "void";
+                        XposedBridge.log(MainHook.TAG + " [trace] AFTER  " + retType + " "
+                                + m.getName() + " ret=" + String.valueOf(param.getResult()));
 
-    private static String sig(Method m) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(m.getReturnType().getSimpleName()).append(' ')
-          .append(m.getName()).append('(');
-        Class<?>[] ps = m.getParameterTypes();
-        for (int i = 0; i < ps.length; i++) {
-            if (i > 0) sb.append(", ");
-            sb.append(ps[i].getSimpleName());
-        }
-        sb.append(')');
-        return sb.toString();
-    }
-
-    private static String previewArgs(Object[] args, Class<?> g8Cls) {
-        try {
-            if (args == null) return "null";
-            Object[] shown = new Object[Math.min(args.length, 4)];
-            for (int i = 0; i < shown.length; i++) {
-                Object a = args[i];
-                if (i == 0 && a != null && a.getClass() == g8Cls) {
-                    shown[i] = "g8{...}";
-                } else if (a instanceof CharSequence s) {
-                    shown[i] = HookUtils.preview(s.toString());
-                } else {
-                    shown[i] = (a == null ? "null" : a.getClass().getSimpleName() + ":" + String.valueOf(a));
+                        // 在 Hb / tb 之后尝试保存模板
+                        if ("Hb".equals(m.getName()) || "tb".equals(m.getName())) {
+                            if (param.args != null && param.args.length > 0) {
+                                Object g8 = param.args[0];
+                                if (g8 != null) {
+                                    WechatG8Prototype.saveTemplate(g8);
+                                }
+                            }
+                        }
+                    } catch (Throwable ignored) {}
                 }
-            }
-            return Arrays.toString(shown) + (args.length > shown.length ? " ..(+" +
-                    (args.length - shown.length) + " more)" : "");
+            };
+
+            // 只钩名字与参数个数，内部日志用
+            findAndHookMethod(i8, "Hb", MainHook.sKernelMsgEntityCls, boolean.class, boolean.class, hook);
+            findAndHookMethod(i8, "tb", MainHook.sKernelMsgEntityCls, hook);
+            findAndHookMethod(i8, "Ic", long.class, MainHook.sKernelMsgEntityCls, boolean.class, hook);
+            findAndHookMethod(i8, "U9", MainHook.sKernelMsgEntityCls, hook);
+            findAndHookMethod(i8, "Rc", MainHook.sKernelMsgEntityCls, hook);
+            try { findAndHookMethod(i8, "Ec", long.class, MainHook.sKernelMsgEntityCls, hook); } catch (Throwable ignored) {}
+
+            INSTALLED = true;
+            XposedBridge.log(MainHook.TAG + " [trace] installed on i8=" + i8.getName());
         } catch (Throwable t) {
-            return "<err:" + t + ">";
+            XposedBridge.log(MainHook.TAG + " KernelSendTracer install fail: " + t);
         }
     }
 }
